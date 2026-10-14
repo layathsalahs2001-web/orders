@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>طلبات المحلات</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Kufi+Arabic:wght@600;700&display=swap">
+<style>
+/* Layout: one narrow column, phone first. Login card, then price list grouped by pack type with a sticky total bar. */
+:root{
+  --bg:#EEF2F5; --surface:#FFFFFF; --fg:#13212B; --muted:#586976; --line:#D3DCE3;
+  --accent:#0D6B8A; --accent-fg:#FFFFFF; --soft:#E1EEF3; --danger:#B3261E;
+  --font-body:"IBM Plex Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;
+  --font-display:"Noto Kufi Arabic","IBM Plex Sans Arabic",Tahoma,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E161C; --surface:#16222B; --fg:#E7EEF2; --muted:#94A4AF; --line:#263642;
+    --accent:#5DBFDD; --accent-fg:#06202A; --soft:#1B3441; --danger:#FF8A80; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E161C; --surface:#16222B; --fg:#E7EEF2; --muted:#94A4AF; --line:#263642;
+  --accent:#5DBFDD; --accent-fg:#06202A; --soft:#1B3441; --danger:#FF8A80; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--font-body); font-size:16px; line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:16px 24px;
+}
+#app{max-width:560px; margin:0 auto}
+h1,h2{font-family:var(--font-display); margin:0; text-wrap:balance}
+button,input,textarea{font:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:20px}
+.login{margin-top:6vh; display:flex; flex-direction:column; gap:16px}
+.login h1{font-size:1.5rem}
+.login p{margin:0; color:var(--muted)}
+.field{display:flex; flex-direction:column; gap:6px}
+.field label{font-weight:600; font-size:.95rem}
+.field input{
+  background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:12px 14px; min-height:48px; width:100%;
+}
+.field input.latin{direction:ltr; text-align:left; font-variant-numeric:tabular-nums; letter-spacing:.03em}
+.btn{
+  background:var(--accent); color:var(--accent-fg); border:0; border-radius:8px; min-height:48px; padding:0 20px; font-weight:600;
+}
+.btn[disabled]{opacity:.45; cursor:not-allowed}
+.btn.ghost{background:transparent; color:var(--accent); border:1px solid var(--line)}
+.btn.block{width:100%}
+.err{color:var(--danger); min-height:1.5em; margin:0; font-size:.95rem}
+.ident{display:flex; flex-direction:column; gap:2px; background:var(--soft); border-radius:8px; padding:10px 14px}
+.ident b{font-family:var(--font-display); font-size:.95rem; font-weight:700}
+.ident span{color:var(--muted); font-size:.9rem}
+#shopView > .ident{margin-bottom:12px}
+.thanks{background:var(--soft); border-radius:10px; padding:14px 16px; line-height:1.9; font-weight:600}
+.top{display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:12px}
+.top .btn{min-height:40px; padding:0 14px}
+.shopname{font-family:var(--font-display); font-weight:700; font-size:1.15rem; overflow-wrap:anywhere}
+.shopid{color:var(--muted); font-size:.85rem; direction:ltr; text-align:right; font-variant-numeric:tabular-nums}
+.cats{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg);
+  display:flex; gap:8px; overflow-x:auto; padding:8px 0 10px; scrollbar-width:none;
+}
+.cats::-webkit-scrollbar{display:none}
+.chip{
+  flex:none; background:var(--surface); border:1px solid var(--line); border-radius:999px; min-height:40px; padding:0 16px; font-weight:500;
+}
+.group{padding-top:14px; scroll-margin-top:64px}
+.group h2{font-size:1.05rem; padding-bottom:8px}
+.rows{background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; min-height:64px}
+.row + .row{border-top:1px solid var(--line)}
+.row.on{background:var(--soft)}
+.pname{font-weight:600; min-width:0; overflow-wrap:anywhere}
+.pprice{color:var(--muted); font-size:.9rem; font-variant-numeric:tabular-nums}
+.step{display:flex; align-items:center; gap:4px; flex:none; direction:ltr}
+.step button{
+  width:44px; height:44px; border-radius:8px; border:1px solid var(--line); background:var(--surface); font-size:1.4rem; line-height:1;
+}
+.step input{
+  width:56px; height:44px; text-align:center; border:1px solid var(--line); border-radius:8px; background:var(--bg);
+  font-variant-numeric:tabular-nums; font-weight:600;
+}
+.spacer{height:110px}
+.bar{
+  position:fixed; left:0; right:0; bottom:0; z-index:10; background:var(--surface); border-top:1px solid var(--line);
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+}
+.bar-in{max-width:560px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px}
+.sum{display:flex; flex-direction:column; min-width:0}
+.sum b{font-size:1.2rem; font-variant-numeric:tabular-nums}
+.sum span{color:var(--muted); font-size:.85rem}
+.review{display:flex; flex-direction:column; gap:16px}
+.review h2{font-size:1.25rem}
+.lines{margin:0; padding:0; list-style:none}
+.lines li{display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line)}
+.lines li:first-child{border-top:0}
+.lines .l{min-width:0; overflow-wrap:anywhere}
+.lines .r{flex:none; font-variant-numeric:tabular-nums; font-weight:600}
+.total{display:flex; justify-content:space-between; font-family:var(--font-display); font-weight:700; font-size:1.15rem; padding-top:12px; border-top:2px solid var(--fg)}
+.note{color:var(--muted); font-size:.9rem; margin:0}
+textarea.txt{width:100%; min-height:150px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:12px; direction:rtl; font-size:.9rem}
+a.btn{display:flex; align-items:center; justify-content:center; text-decoration:none}
+.actions{display:flex; flex-direction:column; gap:10px}
+@media (prefers-reduced-motion:no-preference){ .row{transition:background .15s} }
+</style>
+
+</head>
+<body>
+<div id="app" dir="rtl" lang="ar">
+  <main id="login" class="login card">
+    <div class="ident"><b>شركة بيبسي بغداد – مركز تسويق ميسان</b><span>المندوب ليث صلاح</span></div>
+    <h1>طلب البضاعة</h1>
+    <p>أدخل رمز المحل وكلمة المرور المسلَّمين لك.</p>
+    <form id="loginForm" class="login" style="margin:0" autocomplete="off">
+      <div class="field">
+        <label for="shopCode">رمز المحل</label>
+        <input id="shopCode" class="latin" inputmode="text" autocapitalize="characters" placeholder="SHOP0001" required>
+      </div>
+      <div class="field">
+        <label for="shopPass">كلمة المرور</label>
+        <input id="shopPass" class="latin" type="password" autocomplete="off" required>
+      </div>
+      <p id="loginErr" class="err" role="alert"></p>
+      <button class="btn block" id="loginBtn" type="submit">دخول</button>
+    </form>
+  </main>
+
+  <div id="shopView" hidden>
+    <div class="ident"><b>شركة بيبسي بغداد – مركز تسويق ميسان</b><span>المندوب ليث صلاح</span></div>
+    <header class="top">
+      <div>
+        <div class="shopname" id="shopName"></div>
+        <div class="shopid" id="shopIdLabel"></div>
+      </div>
+      <button class="btn ghost" id="logout" type="button">خروج</button>
+    </header>
+    <nav class="cats" id="cats" aria-label="أنواع العبوات"></nav>
+    <div id="list"></div>
+    <div class="spacer"></div>
+    <div class="bar">
+      <div class="bar-in">
+        <div class="sum"><b id="totalMoney">0 د.ع</b><span id="totalQty">لم تختر شيئاً بعد</span></div>
+        <button class="btn" id="reviewBtn" type="button" disabled>مراجعة الطلب</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="review" class="review card" hidden>
+    <h2>فاتورة الطلب</h2>
+    <ul class="lines" id="lines"></ul>
+    <div class="total"><span>المجموع</span><span id="reviewTotal"></span></div>
+    <div class="thanks" id="thanks"></div>
+    <div class="actions">
+      <a class="btn block" id="waBtn" href="#" target="_blank" rel="noopener" hidden>فتح واتساب وإرسال الطلب</a>
+      <button class="btn block" id="copyBtn" type="button">نسخ نص الفاتورة</button>
+      <button class="btn ghost block" id="backBtn" type="button">تعديل الكميات</button>
+    </div>
+    <p class="note" id="waNote" hidden>يفتح الزر واتساب برسالة جاهزة، ولا يكتمل الطلب حتى تضغط إرسال داخل واتساب.</p>
+    <p class="note" id="copyNote" role="status"></p>
+    <textarea class="txt" id="invoiceText" readonly aria-label="نص الفاتورة"></textarea>
+    <button class="btn ghost block" id="newBtn" type="button">طلب جديد</button>
+  </section>
+</div>
+
+<script>
+const SHOPS = {"SHOP0001": {"n": "اسواق ابو شهد", "h": "040c6804f48e1917420c27a61628c4f4085fa10f03232bfd3fb776d45d2c9e76"}, "SHOP0002": {"n": "سوبر ماركت الحجي", "h": "6da323d9f2957c1f50dc353dc63dddda1c907a354dde95d51f097df2c7976ac4"}, "SHOP0003": {"n": "اسواق لاخوين", "h": "299e1887364b69e658a15dd13f3ce64904d2c3d4234a2012e45ec9745d2f23f6"}, "SHOP0004": {"n": "اسواق ابو رعد", "h": "36af7038a08a19a9a40181b87a12539818da706f0b3fd6fc9c444b7f5bfe9d3c"}, "SHOP0005": {"n": "اسواق عبوسي", "h": "43477f299d3f8e9a976d449f75c905bbe5fd5c30e15c77a2070a0bc6e40e25ea"}, "SHOP0006": {"n": "النرجس", "h": "48489f698a2de2a1ebeeb19fb8c9fa90a7433fc6e029ab8bc7ea4a8e8559ae35"}, "SHOP0007": {"n": "ام البنين", "h": "98d9546e525760a88c4c3435e8d6de99097bf29ce1d42f994f091473555a465b"}, "SHOP0008": {"n": "سيد علي", "h": "c8a7fab95971d3b1742fcd27816f8d90d0e01e9605c2680f6a7fdd265ca0064f"}, "SHOP0009": {"n": "القائد", "h": "949e00b67ea6e2c2ebcb0c7879883bc0643ba5e2f5ee5e422f999f58ac3c5503"}, "SHOP0010": {"n": "كوزمتك محمود", "h": "326566a5331b7a92e078fb0e11037b8404432ef790ea635ae475b0250e67487d"}, "SHOP0011": {"n": "رسول", "h": "afb761af32b105ac490d4dcf5c5d61ba6735c7ce6754d4a8cdcad04e2b99d2d4"}, "SHOP0012": {"n": "الخير", "h": "3a38a41e4533aeef6bad8275939d694009d35079ce943c329f827db9f5c292cc"}, "SHOP0013": {"n": "ابو يوسف القريشي", "h": "f8f1edb78666c52944216c50d7f8ba8c5922bd67ddf03b57f7da21775b12b8d2"}, "SHOP0014": {"n": "زهور ميسان", "h": "c3881ddd7afe913c90368eb94b7fa851a3703984f1b1da443c4561caa94112b2"}, "SHOP0015": {"n": "ابو علي", "h": "c6fc7b8490c5c2b3434515997ef7f1359f2bf83c4aeaa6648787aa341a66c286"}, "SHOP0016": {"n": "مول ليدل", "h": "09b3c0e6d867b3873d43204fd83c6a308ac5e583483af8122d36b12719fa3fcc"}, "SHOP0017": {"n": "اسواق النخيل", "h": "e737d54d30198c20c866ffb7be838e5d2ba5f3376d8659980d9c972f35911fad"}, "SHOP0018": {"n": "اسواق سيد عباس", "h": "dcadeb54698aba113a21a676741872ddf977397d7c14e8691701395d5a2056c6"}, "SHOP0019": {"n": "اسواق ام البنين", "h": "daff301e4d3114dadb4db28826e3225ae0f5ba338bc0f435d04661edf4708341"}, "SHOP0020": {"n": "كوزمتك حسين", "h": "774eb9c76f5000d97020e085f59c361d94742b2ef1aa1cfa084af4bcf49f7bb1"}, "SHOP0021": {"n": "اسواق المصطفى", "h": "a9cc6c4708d7b820a0c9063b30381a0a634ff2e9ddb5fad0e0a5210728d2929e"}, "SHOP0022": {"n": "علاء العطار", "h": "5518fe242b0387930b9917586108b6bb95fed6e28cd5e97d18ee6c6363aa6ccd"}, "SHOP0023": {"n": "اسواق حيدر", "h": "4e08a0e5ad017e2411b01657b8f89944ce3ee70b7a8ff9a4cb96b5d8238249ac"}, "SHOP0024": {"n": "سنتر طيوفه", "h": "9639f660ed675c841a65aa68ed6691a0e3ddcd12756780b2d50d617dd6e50778"}, "SHOP0025": {"n": "اسواق حدوري", "h": "d6b4efb7f802457b970dc67f176b8795f506fe1d85c79ed69fb3aeb805a22695"}, "SHOP0026": {"n": "اسواق الجودة كلشي موجود", "h": "1963c15376756fd57f660b1b38a6811eedc98cf8a9707d650c6abd4b25263c34"}, "SHOP0027": {"n": "سنتر العائلة", "h": "88e6a9881116270b62edb1bbae3af7b0b62becb6f962174fa38b72e354d4cbef"}, "SHOP0028": {"n": "اسواق الصادق", "h": "35c27c19d17423a68b86327abd38fa213c981c7e5c39619b3a08b6d439be9233"}, "SHOP0029": {"n": "بركات الزهراء", "h": "21f9a1d884305364a0609cd9fe9fc095ca9246df7c85527aa3e0d11d6a3e167e"}, "SHOP0030": {"n": "علي الكاتي", "h": "4a2fa6750a43cd5a24eccaccae3438ad45653738400a5cfc171a1012c44884b1"}, "SHOP0031": {"n": "الرحمان", "h": "c1bea9fac2813ca20cce304cb3adffdaf92c7ab5a7a998f7e9192ea192e28a37"}};
+const GROUPS = [{"name": "رفيعة", "items": [{"id": "p01", "name": "تفاح", "price": 6750}, {"id": "p02", "name": "بيبسي", "price": 6750}, {"id": "p03", "name": "بيبسي دايت", "price": 6750}, {"id": "p04", "name": "ديو", "price": 6750}, {"id": "p05", "name": "سفن", "price": 6750}, {"id": "p06", "name": "شاني", "price": 6750}, {"id": "p07", "name": "ميرندا", "price": 6750}, {"id": "p08", "name": "حمضيات", "price": 6750}, {"id": "p09", "name": "تيم", "price": 6000}]}, {"name": "عريضة", "items": [{"id": "p10", "name": "بيبسي", "price": 9000}, {"id": "p11", "name": "بيبسي دايت", "price": 9000}, {"id": "p12", "name": "تفاح", "price": 9000}, {"id": "p13", "name": "ديو", "price": 9000}, {"id": "p14", "name": "سفن", "price": 9000}, {"id": "p15", "name": "سفن دايت", "price": 9000}, {"id": "p16", "name": "شاني", "price": 9000}, {"id": "p17", "name": "ميرندا", "price": 9000}]}, {"name": "دبل", "items": [{"id": "p18", "name": "بيبسي", "price": 6250}, {"id": "p19", "name": "تفاح", "price": 6250}, {"id": "p20", "name": "ديو", "price": 6250}, {"id": "p21", "name": "سفن", "price": 6250}, {"id": "p22", "name": "شاني", "price": 6250}, {"id": "p23", "name": "ميرندا", "price": 6250}, {"id": "p24", "name": "اكسترا", "price": 5000}]}, {"name": "وسط", "items": [{"id": "p25", "name": "بيبسي", "price": 5000}, {"id": "p26", "name": "تفاح", "price": 5000}, {"id": "p27", "name": "ديو", "price": 5000}, {"id": "p28", "name": "سفن", "price": 5000}, {"id": "p29", "name": "شاني", "price": 5000}, {"id": "p30", "name": "ميرندا", "price": 5000}]}, {"name": "جوال", "items": [{"id": "p31", "name": "بيبسي", "price": 6500}, {"id": "p32", "name": "تفاح", "price": 6500}, {"id": "p33", "name": "ديو", "price": 6500}, {"id": "p34", "name": "سفن", "price": 6500}, {"id": "p35", "name": "شاني", "price": 6500}, {"id": "p36", "name": "ميرندا", "price": 6500}, {"id": "p37", "name": "اكسترا", "price": 5000}, {"id": "p38", "name": "تيم", "price": 4250}]}, {"name": "قزم", "items": [{"id": "p39", "name": "اكسترا", "price": 5000}, {"id": "p40", "name": "بيبسي", "price": 5250}]}, {"name": "كزاز", "items": [{"id": "p41", "name": "بيبسي", "price": 9000}, {"id": "p42", "name": "ديو", "price": 9000}, {"id": "p43", "name": "سفن", "price": 9000}, {"id": "p44", "name": "ستنك", "price": 9500}]}, {"name": "عصير يومي", "items": [{"id": "p45", "name": "180", "price": 4000}, {"id": "p46", "name": "24", "price": 4000}, {"id": "p47", "name": "36", "price": 4000}, {"id": "p48", "name": "لتر", "price": 10250}]}];
+const RECEIVER = "9647744855333";
+const SALT = "mysan-orders";
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString("en-US");
+let shopId = null;
+const qty = {};
+
+function esc(s){ return String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+async function sha256(text){
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function normCode(raw){
+  const t = raw.trim().toUpperCase().replace(/\s+/g, "");
+  const m = /^(?:SHOP)?0*(\d{1,4})$/.exec(t);
+  return m ? "SHOP" + m[1].padStart(4, "0") : t;
+}
+
+/* ---- login ---- */
+try {
+  const h = (location.hash || "").replace("#", "");
+  if (/^SHOP\d{1,4}$/i.test(h)) $("shopCode").value = normCode(h);
+} catch (e) {}
+
+$("loginForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const err = $("loginErr"); err.textContent = "";
+  const id = normCode($("shopCode").value);
+  const pw = $("shopPass").value.trim();
+  $("loginBtn").disabled = true;
+  try {
+    if (!(window.crypto && crypto.subtle)) { err.textContent = "المتصفح لا يدعم التحقق. افتح الرابط من متصفح هاتفك."; return; }
+    const shop = SHOPS[id];
+    const ok = shop && (await sha256(SALT + "|" + id + "|" + pw)) === shop.h;
+    if (!ok) {
+      await new Promise((r) => setTimeout(r, 900));
+      err.textContent = "رمز المحل أو كلمة المرور غير صحيح. راجع الورقة المسلَّمة لك.";
+      return;
+    }
+    $("shopPass").value = "";
+    enter(id);
+  } finally { $("loginBtn").disabled = false; }
+});
+
+function enter(id){
+  shopId = id;
+  $("shopName").textContent = SHOPS[id].n;
+  $("shopIdLabel").textContent = id;
+  $("login").hidden = true; $("review").hidden = true; $("shopView").hidden = false;
+  buildList(); loadDraft(); update();
+  window.scrollTo(0, 0);
+}
+
+$("logout").addEventListener("click", () => {
+  shopId = null; for (const k in qty) delete qty[k];
+  $("shopView").hidden = true; $("review").hidden = true; $("login").hidden = false;
+  $("shopPass").value = "";
+});
+
+/* ---- price list ---- */
+function buildList(){
+  const cats = $("cats"), list = $("list");
+  cats.innerHTML = ""; list.innerHTML = "";
+  GROUPS.forEach((g, gi) => {
+    const chip = document.createElement("button");
+    chip.type = "button"; chip.className = "chip"; chip.textContent = g.name;
+    chip.addEventListener("click", () => $("g" + gi).scrollIntoView({ behavior: "smooth", block: "start" }));
+    cats.appendChild(chip);
+    const sec = document.createElement("section");
+    sec.className = "group"; sec.id = "g" + gi;
+    sec.innerHTML = '<h2>' + esc(g.name) + '</h2><div class="rows">' + g.items.map((it) =>
+      '<div class="row" data-row="' + it.id + '">' +
+        '<div><div class="pname">' + esc(g.name + " " + it.name) + '</div><div class="pprice">' + fmt(it.price) + ' د.ع للصندوق</div></div>' +
+        '<div class="step">' +
+          '<button type="button" data-id="' + it.id + '" data-d="-1" aria-label="إنقاص ' + esc(g.name + " " + it.name) + '">−</button>' +
+          '<input inputmode="numeric" id="q-' + it.id + '" data-id="' + it.id + '" value="0" aria-label="كمية ' + esc(g.name + " " + it.name) + '">' +
+          '<button type="button" data-id="' + it.id + '" data-d="1" aria-label="زيادة ' + esc(g.name + " " + it.name) + '">+</button>' +
+        '</div></div>').join("") + '</div>';
+    list.appendChild(sec);
+  });
+}
+
+$("list").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-id]"); if (!b) return;
+  const id = b.dataset.id;
+  setQty(id, (qty[id] || 0) + Number(b.dataset.d));
+});
+$("list").addEventListener("input", (ev) => {
+  const i = ev.target.closest("input[data-id]"); if (!i) return;
+  const n = parseInt(i.value.replace(/[^0-9٠-٩]/g, (c) => "٠١٢٣٤٥٦٧٨٩".includes(c) ? "٠١٢٣٤٥٦٧٨٩".indexOf(c) : ""), 10);
+  qty[i.dataset.id] = Number.isFinite(n) ? Math.min(n, 999) : 0;
+  update(true);
+});
+$("list").addEventListener("focusout", (ev) => {
+  const i = ev.target.closest("input[data-id]"); if (i) i.value = String(qty[i.dataset.id] || 0);
+});
+
+function setQty(id, n){
+  qty[id] = Math.max(0, Math.min(999, n));
+  $("q-" + id).value = String(qty[id]);
+  update();
+}
+
+function chosen(){
+  const out = [];
+  GROUPS.forEach((g) => g.items.forEach((it) => {
+    const q = qty[it.id] || 0;
+    if (q > 0) out.push({ label: g.name + " " + it.name, q, price: it.price, sum: q * it.price });
+  }));
+  return out;
+}
+
+function update(typing){
+  const c = chosen();
+  const units = c.reduce((a, x) => a + x.q, 0);
+  const money = c.reduce((a, x) => a + x.sum, 0);
+  $("totalMoney").textContent = fmt(money) + " د.ع";
+  $("totalQty").textContent = units ? units + " صندوق من " + c.length + " صنف" : "لم تختر شيئاً بعد";
+  $("reviewBtn").disabled = units === 0;
+  document.querySelectorAll(".row").forEach((r) => r.classList.toggle("on", (qty[r.dataset.row] || 0) > 0));
+  saveDraft();
+}
+
+/* ---- draft (this phone only) ---- */
+function saveDraft(){ try { if (shopId) localStorage.setItem("draft-" + shopId, JSON.stringify(qty)); } catch (e) {} }
+function loadDraft(){
+  try {
+    const d = JSON.parse(localStorage.getItem("draft-" + shopId) || "{}");
+    for (const k in d) { if (document.getElementById("q-" + k)) { qty[k] = d[k]; document.getElementById("q-" + k).value = String(d[k]); } }
+  } catch (e) {}
+}
+
+/* ---- invoice ---- */
+function invoiceText(){
+  const c = chosen();
+  const money = c.reduce((a, x) => a + x.sum, 0);
+  const units = c.reduce((a, x) => a + x.q, 0);
+  const d = new Date();
+  const date = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const lines = c.map((x) => "• " + x.label + " × " + x.q + " = " + fmt(x.sum));
+  return ["شركة بيبسي بغداد – مركز تسويق ميسان", "المندوب ليث صلاح", "", "طلب بضاعة","المحل: " + SHOPS[shopId].n, "الرمز: " + shopId, "التاريخ: " + date, "", ...lines, "",
+          "عدد الصناديق: " + units, "مبلغ الفاتورة: " + fmt(money) + " د.ع", "", "شكراً لك", "المندوب ليث صلاح"].join("\n");
+}
+
+$("reviewBtn").addEventListener("click", () => {
+  const c = chosen();
+  $("lines").innerHTML = c.map((x) =>
+    '<li><span class="l">' + esc(x.label) + ' × ' + x.q + ' صندوق</span><span class="r">' + fmt(x.sum) + '</span></li>').join("");
+  const money = c.reduce((a, x) => a + x.sum, 0);
+  $("reviewTotal").textContent = fmt(money) + " د.ع";
+  $("thanks").innerHTML = "مبلغ الفاتورة: " + fmt(money) + " د.ع<br>شكراً لك<br>المندوب ليث صلاح";
+  const text = invoiceText();
+  $("invoiceText").value = text;
+  $("copyNote").textContent = "";
+  if (RECEIVER) {
+    $("waBtn").hidden = false; $("waNote").hidden = false;
+    $("waBtn").href = "https://wa.me/" + RECEIVER + "?text=" + encodeURIComponent(text);
+  }
+  $("shopView").hidden = true; $("review").hidden = false;
+  window.scrollTo(0, 0);
+});
+
+$("backBtn").addEventListener("click", () => { $("review").hidden = true; $("shopView").hidden = false; });
+$("newBtn").addEventListener("click", () => {
+  for (const k in qty) { qty[k] = 0; const i = document.getElementById("q-" + k); if (i) i.value = "0"; }
+  $("review").hidden = true; $("shopView").hidden = false; update(); window.scrollTo(0, 0);
+});
+$("copyBtn").addEventListener("click", async () => {
+  const ta = $("invoiceText");
+  try { await navigator.clipboard.writeText(ta.value); $("copyNote").textContent = "تم النسخ. الصقه في محادثة واتساب مع المسؤول."; }
+  catch (e) { ta.focus(); ta.select(); $("copyNote").textContent = "حدّد النص في الأسفل وانسخه يدوياً."; }
+});
+</script>
+</body>
+</html>
